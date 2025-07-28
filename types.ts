@@ -27,7 +27,7 @@ export type MsgEvent = typeof MsgEvents[number]
 
 export const MsgErrors = [
   "err:player_already_in_room",
-  "err:test",
+  "err:invalid_json",
 ] as const
 export type MsgError = typeof MsgErrors[number]
 

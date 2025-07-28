@@ -44,6 +44,10 @@ function getPlayerList() {
   }) as Player[]
 }
 
+function getPlayerBySocketId(id: string) {
+  return room.players.find((player) => player.socket.id === id)
+}
+
 function setRandomPlayerMemberships(fasTarget: number, libTarget: number) {
   let fasCount = 0
   let libCount = 0
@@ -73,7 +77,16 @@ io.on("connection", (socket) => {
   console.log("soc conn ...")
 
   socket.on(CHANNELS.EVENT, (str) => {
-    const message = JSON.parse(str) as Message<Msg>
+    let message: Message<Msg>
+    try {
+      message = JSON.parse(str) as Message<Msg>
+    } catch(e) {
+      const player = getPlayerBySocketId(socket.id)
+      if (player) {
+        sendToPlayer(player.id, { msg: "err:invalid_json", payload: {} })
+      }
+      return
+    }
 
     console.log("req:", message)
 
