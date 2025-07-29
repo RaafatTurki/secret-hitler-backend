@@ -1,10 +1,7 @@
 import { UUID } from "crypto"
 import { Socket } from "socket.io"
 
-export const CHANNELS = {
-  EVENT: "event",
-  ERR: "err",
-} as const
+export const CHANNEL = "event"
 
 export const MsgEvents = [
   "room:join",
@@ -16,8 +13,8 @@ export const MsgEvents = [
   "room:start",
   "room:started",
 
-  "room:restart",
-  "room:restarted",
+  "room:reset",
+  "room:reseted",
 
   "vote",
   "voted",
@@ -28,10 +25,8 @@ export const MsgEvents = [
 
   "membership:show",
   "membership:shown",
-] as const
-export type MsgEvent = typeof MsgEvents[number]
 
-export const MsgErrors = [
+
   "err:invalid_json",
   "err:player_already_in_room",
   "err:invalid_msg",
@@ -40,77 +35,52 @@ export const MsgErrors = [
   "err:invalid_socket_id",
   "err:invalid_players_count",
 ] as const
-export type MsgError = typeof MsgErrors[number]
+export type MsgEvent = typeof MsgEvents[number]
 
-export const Msgs = [
-  ...MsgEvents,
-  ...MsgErrors,
-] as const
-export type Msg = typeof Msgs[number]
-
+export interface Message<T> {
+  msg: MsgEvent
+  payload: T
+}
 
 export enum Membership {
   LIB = "LIB",
   FAS = "FAS",
 }
 
-export interface Player {
-  id: UUID
+export type Player = {
+  id: string
   name: string
-  vote?: boolean
-  membership?: Membership
+  vote: boolean | null
+  membership: Membership | null
   isHitler: boolean
   isDead: boolean
   isSpecator: boolean
-  socket: Socket
 }
 
-export interface Room {
-  players: Player[]
-  isRoomStarted: boolean
-}
-
-
-export interface Message<T> {
-  msg: Msg
-  payload: T
-}
-
-export interface MsgRoomJoinPayload {
-  name: string
-  isSpecator?: boolean
-}
-
-export interface MsgRoomJoinedPayload {
-  players: Player[]
-}
-
-
-export interface MsgRoomLeftPayload {
-  playerId: UUID
-}
-
-
-export interface MsgRoomStartedPayload {
-  players: Player[]
-}
-
-
-export interface MsgVotePayload {
-  vote: boolean
-}
-
-
-export interface MsgVoteResultPayload {
-  players: Player[]
-}
-
-
-export interface MsgMembershipShowPayload {
-  playerId: UUID
-}
-
-
-export interface MsgMembershipShownPayload {
-  playerId: UUID
+export type MsgPayloads = {
+  "room:join": {
+    name: string
+    isSpecator?: boolean
+  },
+  "room:joined": {
+    players: Player[]
+  },
+  "room:left": {
+    playerId: string
+  },
+  "room:started": {
+    players: Player[]
+  },
+  "vote": {
+    vote: boolean
+  },
+  "vote:result": {
+    players: Player[]
+  },
+  "membership:show": {
+    playerId: string
+  },
+  "membership:shown": {
+    playerId: string
+  }
 }

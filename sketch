@@ -27,8 +27,8 @@ room_left:player_id
 room_start
 room_started:Room
 
-room_restart
-room_restarted
+room_reset
+room_restted
 
 vote:vote
 vote:voted
