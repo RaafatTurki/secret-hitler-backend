@@ -71,20 +71,32 @@ function setRandomPlayerMemberships(fasTarget: number, libTarget: number) {
 
   room.players.forEach((player) => {
     if (fasCount < fasTarget && libCount < libTarget) {
-      Math.random() > 0.5 ? player.membership = Membership.FAS : player.membership = Membership.LIB
+      if (Math.random() > 0.5) {
+        player.membership = Membership.FAS
+        fasCount++
+      } else {
+        player.membership = Membership.LIB
+        libCount++
+      }
     } else if (fasCount < fasTarget || libCount < libTarget) {
       if (fasCount == fasTarget) {
         player.membership = Membership.LIB
+        libCount++
       } else if (libCount == libTarget) {
         player.membership = Membership.FAS
+        fasCount++
       }
     } else {
+      console.log("no change")
       return
     }
   })
 
+  console.log("players", room.players.map(player => player.name))
   const fasPlayers = room.players.filter(player => player.membership == Membership.FAS)
+  console.log("fas players", fasPlayers.map(player => player.name))
   const hitler = fasPlayers[Math.floor(Math.random() * fasPlayers.length)]
+  console.log("hitler", hitler.name)
   hitler.isHitler = true
 }
 
@@ -202,6 +214,7 @@ function handleRoomStart(socket: Socket) {
   switch (room.players.length) {
     case 2:
       setRandomPlayerMemberships(1, 1)
+      break
     case 5:
       setRandomPlayerMemberships(2, 3)
       break
