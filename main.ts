@@ -33,19 +33,35 @@ function sendToPlayer<T>(id: UUID, message: Message<T>) {
 
 }
 
+function sendToSocket<T>(socketId: string, message: Message<T>) {
+  const socket = room.players.find(player => player.socket.id == socketId)?.socket
+  if (!socket) return
+
+  if (MsgErrors.includes(message.msg as any)) {
+    socket.emit(CHANNELS.ERR, message)
+    console.log("res:", CHANNELS.ERR, message)
+  } else if (MsgEvents.includes(message.msg as any)) {
+    socket.emit(CHANNELS.EVENT, message)
+    console.log("res:", CHANNELS.EVENT, message)
+  }
+}
+
 function getPlayerList() {
-  return room.players.map((player) => {
+  return room.players.map(player => {
     return {
+      id: player.id,
       name: player.name,
-      isSpecator: player.isSpecator,
+      vote: player.vote,
+      membership: player.membership,
       isHitler: player.isHitler,
-      isDead: player.isDead
+      isDead: player.isDead,
+      isSpecator: player.isSpecator,
     }
   }) as Player[]
 }
 
-function getPlayerBySocketId(id: string) {
-  return room.players.find((player) => player.socket.id === id)
+function getPlayerBySocketId(socketId: string) {
+  return room.players.find((player) => player.socket.id === socketId)
 }
 
 function setRandomPlayerMemberships(fasTarget: number, libTarget: number) {
@@ -65,6 +81,10 @@ function setRandomPlayerMemberships(fasTarget: number, libTarget: number) {
       return
     }
   })
+
+  const fasPlayers = room.players.filter(player => player.membership == Membership.FAS)
+  const hitler = fasPlayers[Math.floor(Math.random() * fasPlayers.length)]
+  hitler.isHitler = true
 }
 
 const io = new Server({
@@ -77,18 +97,23 @@ io.on("connection", (socket) => {
   console.log("soc conn ...")
 
   socket.on(CHANNELS.EVENT, (str) => {
-    let message: Message<Msg>
-    try {
-      message = JSON.parse(str) as Message<Msg>
-    } catch(e) {
-      const player = getPlayerBySocketId(socket.id)
-      if (player) {
-        sendToPlayer(player.id, { msg: "err:invalid_json", payload: {} })
-      }
-      return
-    }
+    console.log("req:", str)
 
-    console.log("req:", message)
+    let message: Message<Msg> = str
+    // try {
+    //   message = JSON.parse(str) as Message<Msg>
+    // } catch(e) {
+    //   console.error(e)
+    //   // TODO: implement a sendToSeocket function
+    //   const player = getPlayerBySocketId(socket.id)
+    //   console.log("player:", player, socket.id)
+    //   if (player) {
+    //     sendToSocket(socket.id, { msg: "err:invalid_json", payload: {} })
+    //   }
+    //   return
+    // }
+
+    console.log("json:", message)
 
     switch (message.msg) {
       case "room:join":
@@ -112,19 +137,23 @@ io.on("connection", (socket) => {
       case "membership:show":
         handleMembershipShow(socket, message.payload as any)
         break
+      default:
+        sendToSocket(socket.id, { msg: "err:invalid_msg", payload: {} })
+        break
     }
   })
 })
 
 
 function handleRoomJoin(socket: Socket, payload: MsgRoomJoinPayload) {
-  // check if player is already in room
-  const player = room.players.find((player) => player.name === payload.name)
+  if (room.isRoomStarted) sendToSocket(socket.id, { msg: "err:room_already_started", payload: {} })
+
+  const player = room.players.find(player => player.name == payload.name)
   if (player) {
     sendToPlayer(player.id, { msg: "err:player_already_in_room", payload: {} })
     return
   }
-  // add player to room
+
   room.players.push({
     id: randomUUID(),
     name: payload.name,
@@ -133,7 +162,7 @@ function handleRoomJoin(socket: Socket, payload: MsgRoomJoinPayload) {
     isDead: false,
     socket,
   })
-  // send to all players
+
   sendToAll<MsgRoomJoinedPayload>({
     msg: "room:joined",
     payload: {
@@ -143,11 +172,12 @@ function handleRoomJoin(socket: Socket, payload: MsgRoomJoinPayload) {
 }
 
 function handleRoomLeave(socket: Socket) {
-  const player = room.players.find(player => player.socket.id == socket.id)
+  if (room.isRoomStarted) sendToSocket(socket.id, { msg: "err:room_already_started", payload: {} })
+  const player = getPlayerBySocketId(socket.id)
 
   if (player) {
-    room.players = room.players.filter(player => player.id != socket.id)
-    // send to all players
+    room.players = room.players.filter(p => player.id != p.id)
+
     sendToAll<MsgRoomLeftPayload>({
       msg: "room:left",
       payload: {
@@ -158,44 +188,50 @@ function handleRoomLeave(socket: Socket) {
 }
 
 function handleRoomStart(socket: Socket) {
-  if (room.isRoomStarted) return // throw error
-  const admin = room.players[0]
+  if (room.isRoomStarted) sendToSocket(socket.id, { msg: "err:room_already_started", payload: {} })
 
-  if (admin) {
-
-    switch (room.players.length) {
-      case 5:
-        setRandomPlayerMemberships(2, 3)
-        break
-      case 6:
-        setRandomPlayerMemberships(2, 4)
-        break
-      case 7:
-        setRandomPlayerMemberships(3, 4)
-        break
-      case 8:
-        setRandomPlayerMemberships(3, 5)
-        break
-      case 9:
-        setRandomPlayerMemberships(4, 5)
-        break
-      case 10:
-        setRandomPlayerMemberships(4, 6)
-        break
-      default:
-        // TODO: return an error
-        return
-    }
-
-
-    room.isRoomStarted = true
-    sendToAll<MsgRoomStartedPayload>({
-      msg: "room:started",
-      payload: {
-        room: room
-      }
-    })
+  const player = getPlayerBySocketId(socket.id)
+  if (!player) {
+    sendToSocket(socket.id, { msg: "err:invalid_socket_id", payload: {} })
+    return
   }
+  const admin = room.players[0]
+  if (player?.id != admin?.id) sendToSocket(socket.id, { msg: "err:not_admin", payload: {} })
+
+  switch (room.players.length) {
+    case 2:
+      setRandomPlayerMemberships(1, 1)
+    case 5:
+      setRandomPlayerMemberships(2, 3)
+      break
+    case 6:
+      setRandomPlayerMemberships(2, 4)
+      break
+    case 7:
+      setRandomPlayerMemberships(3, 4)
+      break
+    case 8:
+      setRandomPlayerMemberships(3, 5)
+      break
+    case 9:
+      setRandomPlayerMemberships(4, 5)
+      break
+    case 10:
+      setRandomPlayerMemberships(4, 6)
+      break
+    default:
+      sendToSocket(socket.id, { msg: "err:invalid_players_count", payload: {} })
+      return
+  }
+
+  room.isRoomStarted = true
+
+  sendToAll<MsgRoomStartedPayload>({
+    msg: "room:started",
+    payload: {
+      room: room
+    }
+  })
 }
 
 function handleRoomRestart(socket: Socket) {

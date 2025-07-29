@@ -1,0 +1,47 @@
+shuffle memberships/characters
+voting
+show memebrship to someone else
+history (pres - chans)
+
+Room: {
+  players: Player[]
+  isGameStarted: boolean
+}
+
+Player : {
+  id: number
+  name: string
+  vote: boolean | undefiend
+  membership: Membership ("LIB" | "FAS")
+  isHitler: boolean
+  isDead: boolean
+  conn: WebSocket
+}
+
+room_join:name,is_specator
+room_joined:Player[]
+
+room_leave
+room_left:player_id
+
+room_start
+room_started:Room
+
+room_restart
+room_restarted
+
+vote:vote
+vote:voted
+vote:results
+
+vote_reset
+vote_reseted
+
+membership_show:player_id
+membership_shown:Player
+
+
+
+
+
+

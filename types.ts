@@ -9,25 +9,36 @@ export const CHANNELS = {
 export const MsgEvents = [
   "room:join",
   "room:joined",
+
   "room:leave",
   "room:left",
+
   "room:start",
   "room:started",
+
   "room:restart",
   "room:restarted",
+
   "vote",
   "voted",
   "vote:result",
+
   "vote:reset",
   "vote:reseted",
+
   "membership:show",
   "membership:shown",
 ] as const
 export type MsgEvent = typeof MsgEvents[number]
 
 export const MsgErrors = [
-  "err:player_already_in_room",
   "err:invalid_json",
+  "err:player_already_in_room",
+  "err:invalid_msg",
+  "err:room_already_started",
+  "err:not_admin",
+  "err:invalid_socket_id",
+  "err:invalid_players_count",
 ] as const
 export type MsgError = typeof MsgErrors[number]
 
