@@ -92,7 +92,7 @@ export interface MsgRoomLeftPayload {
 
 
 export interface MsgRoomStartedPayload {
-  room: Room
+  players: Player[]
 }
 
 

@@ -9,6 +9,7 @@ const room: Room = {
 
 function sendToAll<T>(message: Message<T>) {
   room.players.forEach((player) => {
+    console.log("sendToAll", player.socket.id, message)
     if (MsgErrors.includes(message.msg as any)) {
       player.socket.emit(CHANNELS.ERR, message)
       console.log("res:", CHANNELS.ERR, message)
@@ -229,7 +230,7 @@ function handleRoomStart(socket: Socket) {
   sendToAll<MsgRoomStartedPayload>({
     msg: "room:started",
     payload: {
-      room: room
+      players: getPlayerList(),
     }
   })
 }
