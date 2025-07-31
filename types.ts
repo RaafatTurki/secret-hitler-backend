@@ -29,6 +29,7 @@ export const MsgEvents = [
 
   "err:invalid_json",
   "err:player_already_in_room",
+  "err:player_with_this_name_already_in_room",
   "err:invalid_msg",
   "err:room_already_started",
   "err:not_admin",

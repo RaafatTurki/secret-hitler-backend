@@ -16,7 +16,11 @@ io.on("connection", (socket) => {
   console.log("soc conn ...")
 
   socket.on(CHANNEL, (message: Message<MsgEvent>) => {
-    console.log("in:", message)
+
+    // dirty workaround for clients that send data as string
+    try {
+      message = JSON.parse(message as any)
+    } catch(e) {}
 
     switch (message.msg) {
       case "room:join":
@@ -51,12 +55,19 @@ io.on("connection", (socket) => {
 
 
 function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
-  if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+  if (room.isStarted) {
+    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+    return
+  }
+  if (room.getPlayerById(socket.id)) {
+    room.send(socket.id, { msg: "err:player_already_in_room", payload: {} })
+    return
+  }
 
   // real player
   if (payload.name) {
     if (room.checkPlayerExists(payload.name)) {
-      room.send(socket.id, { msg: "err:player_already_in_room", payload: {} })
+      room.send(socket.id, { msg: "err:player_with_this_name_already_in_room", payload: {} })
       return
     }
 
@@ -81,8 +92,14 @@ function handleRoomLeave(socket: Socket) {
 }
 
 function handleRoomStart(socket: Socket) {
-  if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-  if (!room.isPlayerAdmin(socket.id)) room.send(socket.id, { msg: "err:not_admin", payload: {} })
+  if (room.isStarted) {
+    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+    return
+  }
+  if (!room.isPlayerAdmin(socket.id)) {
+    room.send(socket.id, { msg: "err:not_admin", payload: {} })
+    return
+  }
 
   switch (room.players.length) {
     case 2:
@@ -122,8 +139,14 @@ function handleRoomStart(socket: Socket) {
 }
 
 function handleRoomReset(socket: Socket) {
-  if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-  if (!room.isPlayerAdmin(socket.id)) room.send(socket.id, { msg: "err:not_admin", payload: {} })
+  if (room.isStarted) {
+    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+    return
+  }
+  if (!room.isPlayerAdmin(socket.id)) {
+    room.send(socket.id, { msg: "err:not_admin", payload: {} })
+    return
+  }
 
   room.reset()
 
@@ -136,7 +159,10 @@ function handleRoomReset(socket: Socket) {
 }
 
 function handleVote(socket: Socket, payload: MsgPayloads["vote"]) {
-  if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+  if (room.isStarted) {
+    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+    return
+  }
 
   room.setVote(socket.id, payload.vote)
 
@@ -158,8 +184,14 @@ function handleVote(socket: Socket, payload: MsgPayloads["vote"]) {
 }
 
 function handleVoteReset(socket: Socket) {
-  if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-  if (!room.isPlayerAdmin(socket.id)) room.send(socket.id, { msg: "err:not_admin", payload: {} })
+  if (room.isStarted) {
+    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
+    return
+  }
+  if (!room.isPlayerAdmin(socket.id)) {
+    room.send(socket.id, { msg: "err:not_admin", payload: {} })
+    return
+  }
 
   room.resetVotes()
 
