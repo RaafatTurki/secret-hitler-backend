@@ -78,11 +78,14 @@ export class Room {
 
   reset() {
     this.isStarted = false
-    this.players.map(p => {
-      p.vote = null
-      p.isHitler = false
-      p.membership = null
-    })
+    this.players = []
+
+    // this.isStarted = false
+    // this.players.map(p => {
+    //   p.vote = null
+    //   p.isHitler = false
+    //   p.membership = null
+    // })
   }
 
   setRandomPlayerMemberships(fasTarget: number, libTarget: number) {

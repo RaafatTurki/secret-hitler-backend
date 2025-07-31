@@ -70,7 +70,7 @@ export type MsgPayloads = {
     players: Player[]
   },
   "room:left": {
-    playerId: string
+    players: Player[]
   },
   "room:started": {
     players: Player[]

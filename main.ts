@@ -80,7 +80,7 @@ function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
       }
     })
 
-  // spectator
+    // spectator
   } else {
     room.addSpectator(socket)
   }
@@ -89,6 +89,13 @@ function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
 function handleRoomLeave(socket: Socket) {
   if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
   room.delPlayer(socket.id)
+
+  room.sendToAll<MsgPayloads["room:left"]>({
+    msg: "room:left",
+    payload: {
+      players: room.listPlayers()
+    }
+  })
 }
 
 function handleRoomStart(socket: Socket) {
