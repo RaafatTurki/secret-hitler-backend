@@ -1,10 +1,11 @@
 import { Socket } from "socket.io"
-import { CHANNEL, Membership, Message, Player } from "./types"
+import { CHANNEL, Membership, Message, Player, Specator } from "./types"
 
 export class Room {
   sockets: Map<string, Socket> = new Map()
   isStarted = false
   players: Player[] = []
+  spectators: Specator[] = []
 
   addPlayer(name: string, socket: Socket) {
     this.sockets.set(socket.id, socket)
@@ -19,6 +20,15 @@ export class Room {
     }
     this.players.push(player)
     return player
+  }
+
+  addSpectator(socket: Socket) {
+    this.sockets.set(socket.id, socket)
+    const spectator = {
+      id: socket.id,
+      name: `spectator#${this.spectators.length}`,
+    }
+    this.spectators.push(spectator)
   }
 
   checkPlayerExists(name: string) {

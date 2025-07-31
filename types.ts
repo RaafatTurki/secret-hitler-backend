@@ -47,6 +47,11 @@ export enum Membership {
   FAS = "FAS",
 }
 
+export type Specator = {
+  id: string
+  name: string
+}
+
 export type Player = {
   id: string
   name: string
@@ -54,13 +59,11 @@ export type Player = {
   membership: Membership | null
   isHitler: boolean
   isDead: boolean
-  isSpecator: boolean
 }
 
 export type MsgPayloads = {
   "room:join": {
-    name: string
-    isSpecator?: boolean
+    name?: string
   },
   "room:joined": {
     players: Player[]

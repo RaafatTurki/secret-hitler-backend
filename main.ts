@@ -53,19 +53,26 @@ io.on("connection", (socket) => {
 function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
   if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
 
-  if (room.checkPlayerExists(payload.name)) {
-    room.send(socket.id, { msg: "err:player_already_in_room", payload: {} })
-    return
-  }
-
-  room.addPlayer(payload.name, socket)
-
-  room.sendToAll<MsgPayloads["room:joined"]>({
-    msg: "room:joined",
-    payload: {
-      players: room.listPlayers()
+  // real player
+  if (payload.name) {
+    if (room.checkPlayerExists(payload.name)) {
+      room.send(socket.id, { msg: "err:player_already_in_room", payload: {} })
+      return
     }
-  })
+
+    room.addPlayer(payload.name, socket)
+
+    room.sendToAll<MsgPayloads["room:joined"]>({
+      msg: "room:joined",
+      payload: {
+        players: room.listPlayers()
+      }
+    })
+
+  // spectator
+  } else {
+    room.addSpectator(socket)
+  }
 }
 
 function handleRoomLeave(socket: Socket) {

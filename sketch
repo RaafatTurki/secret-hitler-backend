@@ -18,7 +18,7 @@ Player : {
   conn: WebSocket
 }
 
-room_join:name,is_specator
+room_join:name?
 room_joined:Player[]
 
 room_leave
