@@ -4,7 +4,7 @@ import { CHANNEL, Membership, Message, Player } from "./types"
 export class Room {
   sockets: Map<string, Socket> = new Map()
   isStarted = false
-  players: Player[]
+  players: Player[] = []
 
   addPlayer(name: string, socket: Socket) {
     this.sockets.set(socket.id, socket)
