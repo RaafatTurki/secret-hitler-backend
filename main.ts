@@ -44,6 +44,8 @@ io.on("connection", (socket) => {
         room.send(socket.id, { msg: "err:invalid_msg", payload: {} })
         break
     }
+
+    console.log(room.toString())
   })
 })
 
@@ -69,8 +71,6 @@ function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
 function handleRoomLeave(socket: Socket) {
   if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
   room.delPlayer(socket.id)
-
-  console.log(room.listPlayers())
 }
 
 function handleRoomStart(socket: Socket) {

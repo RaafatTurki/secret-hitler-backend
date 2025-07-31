@@ -42,6 +42,19 @@ export class Room {
     return this.players
   }
 
+  toString() {
+    let str = `Room: `
+    str += this.isStarted ? `started ` : `pending `
+    str += `p${this.players.length} `
+    str += '['
+    str += this.players.map(p => {
+      return `${p.name} ${p.membership} ${p.isHitler ? "H" : ""} ${p.isDead ? "D" : ""} ${p.isSpecator ? "S" : ""} ${p.vote != null ? `vote:${p.vote}` : ""}`
+    }).join(", ")
+    str += ']'
+
+    return str
+  }
+
   setVote(playerId: string, vote: boolean) {
     const p = this.getPlayerById(playerId)
     if (p && p.vote == null) p.vote = vote
