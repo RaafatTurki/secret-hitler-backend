@@ -1,11 +1,23 @@
 import { Socket } from "socket.io"
 import { CHANNEL, Membership, Message, Player, Specator } from "./types"
 
+export type RoomData = {
+  isStarted: boolean
+  players: Player[]
+}
+
 export class Room {
   sockets: Map<string, Socket> = new Map()
   isStarted = false
   players: Player[] = []
   spectators: Specator[] = []
+
+  getRoomData() {
+    return {
+      isStarted: this.isStarted,
+      players: this.listPlayers(),
+    } as RoomData
+  }
 
   addPlayer(name: string, socket: Socket) {
     this.sockets.set(socket.id, socket)
@@ -67,7 +79,12 @@ export class Room {
 
   setVote(playerId: string, vote: boolean) {
     const p = this.getPlayerById(playerId)
-    if (p && p.vote == null) p.vote = vote
+    if (p && p.vote == null) {
+      p.vote = vote
+      return true
+    } else {
+      return false
+    }
   }
 
   resetVotes() {

@@ -1,3 +1,5 @@
+import { RoomData } from "./room"
+
 export const CHANNEL = "event"
 
 export const MsgEvents = [
@@ -29,6 +31,7 @@ export const MsgEvents = [
   "err:player_with_this_name_already_in_room",
   "err:invalid_msg",
   "err:room_already_started",
+  "err:room_not_started",
   "err:not_admin",
   "err:invalid_socket_id",
   "err:invalid_players_count",
@@ -64,19 +67,22 @@ export type MsgPayloads = {
     name?: string
   },
   "room:joined": {
-    players: Player[]
+    room: RoomData
   },
   "room:left": {
-    players: Player[]
+    room: RoomData
   },
   "room:started": {
-    players: Player[]
+    room: RoomData
   },
   "vote": {
     vote: boolean
   },
+  "voted": {
+    vote: boolean
+  },
   "vote:result": {
-    players: Player[]
+    room: RoomData
   },
   "membership:show": {
     playerId: string
