@@ -58,7 +58,7 @@ export class Room {
     str += `p${this.players.length} `
     str += '['
     str += this.players.map(p => {
-      return `${p.name} ${p.membership} ${p.isHitler ? "H" : ""} ${p.isDead ? "D" : ""} ${p.isSpecator ? "S" : ""} ${p.vote != null ? `vote:${p.vote}` : ""}`
+      return `${p.name} ${p.membership} ${p.isHitler ? "H" : ""} ${p.isDead ? "D" : ""} ${p.vote != null ? `vote:${p.vote}` : ""}`
     }).join(", ")
     str += ']'
 

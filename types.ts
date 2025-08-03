@@ -1,6 +1,3 @@
-import { UUID } from "crypto"
-import { Socket } from "socket.io"
-
 export const CHANNEL = "event"
 
 export const MsgEvents = [

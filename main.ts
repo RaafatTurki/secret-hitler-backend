@@ -16,6 +16,7 @@ io.on("connection", (socket) => {
   console.log("soc conn ...")
 
   socket.on(CHANNEL, (message: Message<MsgEvent>) => {
+    console.log("in:", message)
 
     // dirty workaround for clients that send data as string
     try {
@@ -146,10 +147,6 @@ function handleRoomStart(socket: Socket) {
 }
 
 function handleRoomReset(socket: Socket) {
-  if (room.isStarted) {
-    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-    return
-  }
   if (!room.isPlayerAdmin(socket.id)) {
     room.send(socket.id, { msg: "err:not_admin", payload: {} })
     return
@@ -159,9 +156,7 @@ function handleRoomReset(socket: Socket) {
 
   room.sendToAll({
     msg: "room:reseted",
-    payload: {
-      room: room
-    }
+    payload: {}
   })
 }
 
