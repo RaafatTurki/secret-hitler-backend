@@ -15,6 +15,19 @@ const io = new Server({
 io.on("connection", (socket) => {
   console.log("soc conn ...")
 
+  socket.on('disconnect', reason => {
+    console.log("soc disconnect ...")
+
+    room.delPlayer(socket.id)
+
+    room.sendToAll<MsgPayloads["room:left"]>({
+      msg: "room:left",
+      payload: {
+        players: room.listPlayers()
+      }
+    })
+  })
+
   socket.on(CHANNEL, (message: Message<MsgEvent>) => {
     console.log("in:", message)
 
@@ -53,7 +66,6 @@ io.on("connection", (socket) => {
     console.log(room.toString())
   })
 })
-
 
 function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
   if (room.isStarted) {
