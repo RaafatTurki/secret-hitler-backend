@@ -14,7 +14,6 @@ const io = new Server({
 
 io.on("connection", (socket) => {
   console.log("soc conn ...")
-
   socket.on('disconnect', reason => {
     console.log("soc disconnect ...")
 
@@ -46,14 +45,14 @@ io.on("connection", (socket) => {
       case "room:start":
         handleRoomStart(socket)
         break
-      case "room:reset":
+      case "room:clear":
         handleRoomReset(socket)
         break
       case "vote":
         handleVote(socket, message.payload as any)
         break
-      case "vote:reset":
-        handleVoteReset(socket)
+      case "vote:clear":
+        handleVoteClear(socket)
         break
       case "membership:show":
         handleMembershipShow(socket, message.payload as any)
@@ -167,13 +166,13 @@ function handleRoomReset(socket: Socket) {
   room.reset()
 
   room.sendToAll({
-    msg: "room:reseted",
+    msg: "room:cleared",
     payload: {}
   })
 }
 
 function handleVote(socket: Socket, payload: MsgPayloads["vote"]) {
-  if (room.isStarted) {
+  if (!room.isStarted) {
     room.send(socket.id, { msg: "err:room_already_started", payload: {} })
     return
   }
@@ -197,11 +196,7 @@ function handleVote(socket: Socket, payload: MsgPayloads["vote"]) {
   }
 }
 
-function handleVoteReset(socket: Socket) {
-  if (room.isStarted) {
-    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-    return
-  }
+function handleVoteClear(socket: Socket) {
   if (!room.isPlayerAdmin(socket.id)) {
     room.send(socket.id, { msg: "err:not_admin", payload: {} })
     return
@@ -209,7 +204,7 @@ function handleVoteReset(socket: Socket) {
 
   room.resetVotes()
 
-  room.sendToAll({ msg: "vote:reseted", payload: {} })
+  room.sendToAll({ msg: "vote:cleared", payload: {} })
 }
 
 function handleMembershipShow(socket: Socket, payload: MsgPayloads["membership:show"]) {

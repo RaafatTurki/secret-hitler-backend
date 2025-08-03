@@ -10,15 +10,15 @@ export const MsgEvents = [
   "room:start",
   "room:started",
 
-  "room:reset",
-  "room:reseted",
+  "room:clear",
+  "room:cleared",
 
   "vote",
   "voted",
   "vote:result",
 
-  "vote:reset",
-  "vote:reseted",
+  "vote:clear",
+  "vote:cleared",
 
   "membership:show",
   "membership:shown",
