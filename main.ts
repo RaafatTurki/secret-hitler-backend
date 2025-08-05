@@ -1,10 +1,10 @@
 import { Server, Socket } from "socket.io"
-import { Message, CHANNEL, MsgEvent, MsgPayloads } from "./types"
-import { Room } from "./room"
+import { Message, CHANNEL, MsgEvent, MsgPayloads, Errs, Err } from "./types"
+import { Game } from "./game"
 
 const PORT = 3030
 
-const room = new Room()
+const game = new Game()
 
 const io = new Server({
   cors: {
@@ -13,192 +13,193 @@ const io = new Server({
 })
 
 io.on("connection", (socket) => {
-  console.log("soc conn ...")
-  socket.on('disconnect', reason => {
-    console.log("soc disconnect ...")
+  console.log(`soc conn ${socket.id}`)
 
-    room.delPlayer(socket.id)
+  // handle disconnect
+  socket.on('disconnect', _reason => {
+    console.log(`soc disconn ${socket.id}`)
 
-    room.sendToAll<MsgPayloads["room:left"]>({
+    game.delPlayer(socket.id)
+
+    game.sendToAll<"room:left">({
       msg: "room:left",
       payload: {
-        room: room.getRoomData()
+        room: game.data()
       }
     })
   })
 
+  // handle message
   socket.on(CHANNEL, (message: Message<MsgEvent>) => {
     console.log("in:", message)
 
-    if (room.players.length == 0) {
-      room.isStarted = false
-      room.sockets.clear()
-    }
-
-    // dirty workaround for clients that send data as string
+    // NOTE: attempt to json parse msg in case it got recieved as a string
     try {
       message = JSON.parse(message as any)
     } catch(e) {}
 
-    switch (message.msg) {
-      case "room:join":
-        handleRoomJoin(socket, message.payload as any)
-        break
-      case "room:leave":
-        handleRoomLeave(socket)
-        break
-      case "room:start":
-        handleRoomStart(socket)
-        break
-      case "room:clear":
-        handleRoomClear(socket)
-        break
-      case "vote":
-        handleVote(socket, message.payload as any)
-        break
-      case "vote:clear":
-        handleVoteClear(socket)
-        break
-      case "membership:show":
-        handleMembershipShow(socket, message.payload as any)
-        break
-      default:
-        room.send(socket.id, { msg: "err:invalid_msg", payload: {} })
-        break
+    try {
+      switch (message.msg) {
+        case "room:join":
+          handleRoomJoin(socket, message.payload as any)
+          break
+        case "room:leave":
+          handleRoomLeave(socket)
+          break
+        case "room:start":
+          handleRoomStart(socket)
+          break
+        case "room:kick":
+          handleRoomKick(socket, message.payload as any)
+          break
+        case "room:clear":
+          handleRoomClear(socket)
+          break
+        case "vote":
+          handleVote(socket, message.payload as any)
+          break
+        case "vote:clear":
+          handleVoteClear(socket)
+          break
+        case "membership:show":
+          handleMembershipShow(socket, message.payload as any)
+          break
+        default:
+          throw Err("err:invalid_json")
+      }
+    } catch(e) {
+      // catching game request errors and sending them to the current socket
+      if (Object.keys(Errs).includes(e as any)) {
+        game.send(socket.id, { msg: e })
+      } else {
+        console.log(e)
+        // throw e
+      }
+    } finally {
+      console.log(game.toString())
     }
-    console.log(room.toString())
   })
+
+  // auto clear room if no players left
+  if (game.players.length == 0) game.clear()
 })
 
 function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
-  if (room.isStarted) {
-    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-    return
-  }
-  if (room.getPlayerById(socket.id)) {
-    room.send(socket.id, { msg: "err:player_already_in_room", payload: {} })
-    return
-  }
+  if (game.isStarted) throw Err("err:room_already_started")
+  if (game.getPlayerById(socket.id)) throw Err("err:player_already_in_room")
 
   // real player
   if (payload.name) {
-    if (room.checkPlayerExists(payload.name)) {
-      room.send(socket.id, { msg: "err:player_with_this_name_already_in_room", payload: {} })
-      return
-    }
-
-    room.addPlayer(payload.name, socket)
-
-    room.sendToAll<MsgPayloads["room:joined"]>({
+    if (game.checkPlayerExists(payload.name)) throw Err("err:player_with_this_name_already_in_room")
+    game.addPlayer(payload.name, socket)
+    game.sendToAll<"room:joined">({
       msg: "room:joined",
       payload: {
-        room: room.getRoomData()
+        room: game.data()
       }
     })
 
     // spectator
   } else {
-    room.addSpectator(socket)
+    game.addSpectator(socket)
   }
 }
 
 function handleRoomLeave(socket: Socket) {
-  if (room.isStarted) room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-  room.delPlayer(socket.id)
-
-  room.sendToAll<MsgPayloads["room:left"]>({
+  if (game.isStarted) throw Err("err:room_already_started")
+  game.delPlayer(socket.id)
+  game.sendToAll<"room:left">({
     msg: "room:left",
     payload: {
-      room: room.getRoomData()
+      room: game.data()
     }
   })
 }
 
 function handleRoomStart(socket: Socket) {
-  if (room.isStarted) {
-    room.send(socket.id, { msg: "err:room_already_started", payload: {} })
-    return
-  }
-  if (!room.isPlayerAdmin(socket.id)) {
-    room.send(socket.id, { msg: "err:not_admin", payload: {} })
-    return
-  }
+  if (game.isStarted) throw Err("err:room_already_started")
+  if (!game.isPlayerAdmin(socket.id)) throw Err("err:not_admin")
 
-  switch (room.players.length) {
+  switch (game.players.length) {
+    case 1:
+      game.setRandomPlayerMemberships(1, 0)
+      break
     case 2:
-      room.setRandomPlayerMemberships(1, 1)
+      game.setRandomPlayerMemberships(1, 1)
       break
     case 3:
-      room.setRandomPlayerMemberships(1, 2)
+      game.setRandomPlayerMemberships(1, 2)
       break
+
     case 5:
-      room.setRandomPlayerMemberships(2, 3)
+      game.setRandomPlayerMemberships(2, 3)
       break
     case 6:
-      room.setRandomPlayerMemberships(2, 4)
+      game.setRandomPlayerMemberships(2, 4)
       break
     case 7:
-      room.setRandomPlayerMemberships(3, 4)
+      game.setRandomPlayerMemberships(3, 4)
       break
     case 8:
-      room.setRandomPlayerMemberships(3, 5)
+      game.setRandomPlayerMemberships(3, 5)
       break
     case 9:
-      room.setRandomPlayerMemberships(4, 5)
+      game.setRandomPlayerMemberships(4, 5)
       break
     case 10:
-      room.setRandomPlayerMemberships(4, 6)
+      game.setRandomPlayerMemberships(4, 6)
       break
     default:
-      room.send(socket.id, { msg: "err:invalid_players_count", payload: {} })
-      return
+      throw Err("err:invalid_players_count")
   }
 
-  room.isStarted = true
-
-  room.sendToAll<MsgPayloads["room:started"]>({
+  game.isStarted = true
+  game.sendToAll<"room:started">({
     msg: "room:started",
     payload: {
-      room: room.getRoomData(),
+      room: game.data(),
+    }
+  })
+}
+
+function handleRoomKick(socket: Socket, payload: MsgPayloads["room:kick"]) {
+  if (game.isStarted) throw Err("err:room_already_started")
+  if (!game.isPlayerAdmin(socket.id)) throw Err("err:not_admin")
+
+  game.delPlayer(payload.playerId)
+  game.sendToAll<"room:kicked">({
+    msg: "room:kicked",
+    payload: {
+      room: game.data(),
     }
   })
 }
 
 function handleRoomClear(socket: Socket) {
-  if (!room.isPlayerAdmin(socket.id)) {
-    room.send(socket.id, { msg: "err:not_admin", payload: {} })
-    return
-  }
+  if (!game.isPlayerAdmin(socket.id)) throw Err("err:not_admin")
 
-  room.reset()
-
-  room.sendToAll({
-    msg: "room:cleared",
-    payload: {}
+  game.sendToAll({
+    msg: "room:cleared"
   })
+  game.clear()
 }
 
 function handleVote(socket: Socket, payload: MsgPayloads["voted"]) {
-  if (!room.isStarted) {
-    room.send(socket.id, { msg: "err:room_not_started", payload: {} })
-    return
-  }
+  if (!game.isStarted) throw Err("err:room_not_started")
 
-  const isVoted = room.setVote(socket.id, payload.vote)
-
-  if (isVoted) {
-    room.send(socket.id, {
+  if (game.setVote(socket.id, payload.vote)) {
+    game.send(socket.id, {
       msg: "voted",
       payload: {
         vote: payload.vote
       }
     })
 
-    if (room.players.every((player) => player.vote != undefined)) {
-      room.sendToAll<MsgPayloads["vote:result"]>({
+    if (game.players.every((player) => player.vote != undefined)) {
+      game.sendToAll<"vote:result">({
         msg: "vote:result",
         payload: {
-          room: room.getRoomData()
+          room: game.data()
         }
       })
     }
@@ -206,18 +207,14 @@ function handleVote(socket: Socket, payload: MsgPayloads["voted"]) {
 }
 
 function handleVoteClear(socket: Socket) {
-  if (!room.isPlayerAdmin(socket.id)) {
-    room.send(socket.id, { msg: "err:not_admin", payload: {} })
-    return
-  }
+  if (!game.isPlayerAdmin(socket.id)) throw Err("err:not_admin")
 
-  room.resetVotes()
-
-  room.sendToAll({ msg: "vote:cleared", payload: {} })
+  game.resetVotes()
+  game.sendToAll({ msg: "vote:cleared" })
 }
 
 function handleMembershipShow(socket: Socket, payload: MsgPayloads["membership:show"]) {
-  room.send<MsgPayloads["membership:shown"]>(payload.playerId, {
+  game.send<"membership:shown">(payload.playerId, {
     msg: "membership:shown",
     payload: {
       playerId: socket.id

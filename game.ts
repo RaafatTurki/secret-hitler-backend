@@ -1,32 +1,25 @@
 import { Socket } from "socket.io"
-import { CHANNEL, Membership, Message, Player, Specator } from "./types"
+import { CHANNEL, Membership, Message, MsgEvent, Player, Room, Specator } from "./types"
 
-export type RoomData = {
-  isStarted: boolean
-  players: Player[]
-}
-
-export class Room {
+export class Game {
   sockets: Map<string, Socket> = new Map()
   isStarted = false
   players: Player[] = []
   spectators: Specator[] = []
 
-  getRoomData() {
+  data() {
     return {
       isStarted: this.isStarted,
       players: this.listPlayers(),
-    } as RoomData
+    } as Room
   }
 
   addPlayer(name: string, socket: Socket) {
     this.sockets.set(socket.id, socket)
-    const player = {
+    const player: Player = {
       id: socket.id,
       name,
-      isSpecator: false,
       isHitler: false,
-      isDead: false,
       membership: null,
       vote: null,
     }
@@ -57,6 +50,9 @@ export class Room {
   }
 
   isPlayerAdmin(id: string) {
+    console.log(this.players)
+    console.log(id)
+    if (this.players.length == 0) return false
     return this.players[0].id == id
   }
 
@@ -70,7 +66,7 @@ export class Room {
     str += `p${this.players.length} `
     str += '['
     str += this.players.map(p => {
-      return `${p.name} ${p.membership} ${p.isHitler ? "H" : ""} ${p.isDead ? "D" : ""} ${p.vote != null ? `vote:${p.vote}` : ""}`
+      return `${p.name} ${p.membership} ${p.isHitler ? "H" : ""} ${p.vote != null ? `vote:${p.vote}` : ""}`
     }).join(", ")
     str += ']'
 
@@ -88,21 +84,15 @@ export class Room {
   }
 
   resetVotes() {
-    this.players.map(p => {
+    this.players.forEach(p => {
       p.vote = null
     })
   }
 
-  reset() {
+  clear() {
     this.isStarted = false
     this.players = []
-
-    // this.isStarted = false
-    // this.players.map(p => {
-    //   p.vote = null
-    //   p.isHitler = false
-    //   p.membership = null
-    // })
+    this.sockets.clear()
   }
 
   setRandomPlayerMemberships(fasTarget: number, libTarget: number) {
@@ -136,14 +126,16 @@ export class Room {
     hitler.isHitler = true
   }
 
-  send<T>(id: string, message: Message<T>) {
+
+
+  send<T extends MsgEvent>(id: string, message: Message<T>) {
     const socket = this.sockets.get(id)
     if (!socket) return
     socket.emit(CHANNEL, message)
     console.log("out:", message)
   }
 
-  sendToAll<T>(message: Message<T>) {
+  sendToAll<T extends MsgEvent>(message: Message<T>) {
     this.sockets.forEach((socket) => {
       socket.emit(CHANNEL, message)
     })
