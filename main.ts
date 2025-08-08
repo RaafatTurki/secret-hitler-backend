@@ -106,14 +106,20 @@ function handleRoomJoin(socket: Socket, payload: MsgPayloads["room:join"]) {
 }
 
 function handleRoomLeave(socket: Socket) {
-  if (game.isStarted) throw Err("err:room_already_started")
-  game.delPlayer(socket.id)
-  game.sendToAll<"room:left">({
-    msg: "room:left",
-    payload: {
-      room: game.data()
-    }
-  })
+  if (game.isStarted) {
+    game.sendToAll<"room:cleared">({
+      msg: "room:cleared"
+    })
+    game.clear()
+  } else {
+    game.delPlayer(socket.id)
+    game.sendToAll<"room:left">({
+      msg: "room:left",
+      payload: {
+        room: game.data()
+      }
+    })
+  }
 }
 
 function handleRoomStart(socket: Socket) {
@@ -122,32 +128,35 @@ function handleRoomStart(socket: Socket) {
 
   switch (game.players.length) {
     case 1:
-      game.setRandomPlayerMemberships(1, 0)
+      game.setRandomPlayerMemberships(1)
       break
     case 2:
-      game.setRandomPlayerMemberships(1, 1)
+      game.setRandomPlayerMemberships(1)
       break
     case 3:
-      game.setRandomPlayerMemberships(1, 2)
+      game.setRandomPlayerMemberships(1)
+      break
+    case 4:
+      game.setRandomPlayerMemberships(1)
       break
 
     case 5:
-      game.setRandomPlayerMemberships(2, 3)
+      game.setRandomPlayerMemberships(2)
       break
     case 6:
-      game.setRandomPlayerMemberships(2, 4)
+      game.setRandomPlayerMemberships(2)
       break
     case 7:
-      game.setRandomPlayerMemberships(3, 4)
+      game.setRandomPlayerMemberships(3)
       break
     case 8:
-      game.setRandomPlayerMemberships(3, 5)
+      game.setRandomPlayerMemberships(3)
       break
     case 9:
-      game.setRandomPlayerMemberships(4, 5)
+      game.setRandomPlayerMemberships(4)
       break
     case 10:
-      game.setRandomPlayerMemberships(4, 6)
+      game.setRandomPlayerMemberships(4)
       break
     default:
       throw Err("err:invalid_players_count")

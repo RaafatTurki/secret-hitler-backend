@@ -95,28 +95,20 @@ export class Game {
     this.sockets.clear()
   }
 
-  setRandomPlayerMemberships(fasTarget: number, libTarget: number) {
-    let fasCount = 0
-    let libCount = 0
+  setRandomPlayerMemberships(fasTarget: number) {
+    let fasIndecies: number[] = []
 
-    // shuffle membership
-    this.players.forEach(p => {
-      if (fasCount < fasTarget && libCount < libTarget) {
-        if (Math.random() > 0.5) {
-          p.membership = Membership.FAS
-          fasCount++
-        } else {
-          p.membership = Membership.LIB
-          libCount++
-        }
-      } else if (fasCount < fasTarget || libCount < libTarget) {
-        if (fasCount == fasTarget) {
-          p.membership = Membership.LIB
-          libCount++
-        } else if (libCount == libTarget) {
-          p.membership = Membership.FAS
-          fasCount++
-        }
+    while (fasIndecies.length < fasTarget) {
+      const i = Math.floor(Math.random() * this.players.length)
+      if (fasIndecies.includes(i)) continue
+      fasIndecies.push(i)
+    }
+
+    this.players.forEach((p, i) => {
+      if (fasIndecies.includes(i)) {
+        p.membership = Membership.FAS
+      } else {
+        p.membership = Membership.LIB
       }
     })
 
